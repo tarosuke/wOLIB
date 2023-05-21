@@ -1,5 +1,5 @@
 /****************************************************************** Message
- * Copyright (C) 2017 tarosuke<webmaster@tarosuke.net>
+ * Copyright (C) 2017, 2023 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -20,218 +20,173 @@
 #pragma once
 
 #include <toolbox/container/list.h>
+#include <toolbox/type.h>
+
+#include <wOLIB/feature.h>
 
 
 
-namespace wO{
+namespace wO {
 
-	class Message : public TB::List<Message>::Node{
-		Message();
-		Message(const Message&);
-	public:
-		static const unsigned typeMask = 0xff00;
-		static const unsigned typesToApp = 0x8100;
-		static const unsigned typesToCanvas = 0x8200;
-		static const unsigned typePlanet = 0x8300;
-		static const unsigned typePrefs = 0x8400;
-		enum Types{
+	struct Message : public TB::List<Message>::Node {
+		Message() = delete;
+		Message(const Message&) = delete;
+		void operator=(const Message&) = delete;
+
+		/* メッセージID
+		 * エンディアン検出のため最上位ビットが1
+		 */
+		static constexpr u16 typeSystem = 0x8900;
+		static constexpr u16 typeWidget = 0x8100;
+		static constexpr u16 typeDraw = 0x8200;
+		enum Type : u16 {
 			/** システムメッセージ
 			 */
-			helo = 0x8000,
+			helo = typeSystem,
 			commID,
-			bye,
-			disconnected,
-			disposed, //Resourceのデストラクタが送る自動消滅
-			enterProgress, //処理開始(カーソルをprogressにする)
-			exitProgress, //処理終了
-			spawn, //プロセス起動
+			bye, // 切断予告
+			disconnected, // 切断された場合にwOSH / wODMが通知
+			spawn, // 新たに何かを開くとき
+			// 他、システムアラートなどを予定
 
-			/**メッセージ
+			/** Widget関連
 			 */
-			widgetCreated,		//親なしWidgetの場合
-			parentChanged, //親が変更された時
-			ChildWidgetCreated, //親に対して送られる
-			moveTo, //補間移動
-			jumpTo, //即時移動
-			move, //相対補完移動
-			jump, //相対即時移動
-			focus, //フォーカスを取得
-			pick, //対象とそれを含むWidgetを一番手前へ
-			show, //可視化
-			hide, //不可視化
-			setCursor, //Widgetのカーソルを設定
-
-			/** カーソルメッセージ
-			 * cursorChooseはカーソル位置として使うデバイスを選択する
-			 * タブレットは有限なので使わない(代わりにControlにマップして使う)
-			 */
-			cursorsetCreated,
-			cursorChoose,
-
-			/** コマンド
-			 */
-			logout, //wODMとしては終了
-			stickCenter, //中央リセット用)
-			lockCenter,
-			closeRequest, //非推奨
-			//状態変化通知
-			cursorActivated,
-
-			/** DM -> App
-			 * 画面からAppへのメッセージ
-			 * イベントと設定一覧
-			 */
-			//イベント
-			onMouseEnter = typesToApp,
+			onMouseEnter = typeWidget,
 			onMouseLeave,
 			onMouseMove,
-			onMouseButton, //何もないところだとCursorSetに送られる
+			onMouseButton,
 			onScroll,
 			onSightEnter,
 			onSightMove,
 			onSightLeave,
-			onWatched,
-			onGrabStart,
-			onGrabMove,
-			onGrabEnd,
-			onKeyDown, //onKeyUpなしで連続して送られた場合、キーリピート
-			onKeyRepeat, //repeat用予約
+			onKeyDown,
+			onKeyRepeat, // repeat用予約
 			onKeyUp,
+			onFocused,
 			onUnfocused,
 			onResized,
 
-			/** 設定用メッセージ(双方向)
-			 * 内容は設定パスと型、内容
-			 * グループを使う時は設定パスを使う(設定自体は独立だが設定ツールが解釈する)
-			 * 画面側は設定パスを「wODM/」で始めること
-			 * prefItemメッセージに最後フラグが立っていたら転送終了
-			 * 画面からの場合は設定項目と現在の設定
-			 * サーバからの場合は設定
-			 * 値は文字列で
+			/** 描画関連
 			 */
-			prefStart = typePrefs, //設定アプリ起動リクエスト->wOSH
-			prefRequest, //設定情報リクエスト
-			prefItem, //設定情報
-
-			/** canvas
-			 * Canvasのためのメッセージ
-			 */
-			canvasUpdated = typesToCanvas,
-
-			/** planet関連メッセージ
-			 * さらにplanetメッセージタイプで区別する
-			 */
-			planetCreated = typePlanet,
-			createScenery, //背景
-			sceneryActivated,
-			roomCreated,
-			materialCreated,
-			avatarCreated, //Roomに対して送られる
-			newPanel,
-			floorMaterial,
-			ceilMaterial,
-			floorVertex,
-			ceilVertex,
-			drawRoom,
-			//Avatar
-			newAvatar,
-			attachPlayerGhost,
-
-			/** development
-			 * You can use 0xff00 - 0xff7f for development
-			 * Issue PULL-REQUEST before you release it.
-			 * We'll assign message number and merge it.
-			 * 0xff00 - 0xff7fの範囲は開発用に使えます。
-			 * 番号を与えて組み込むのでプルリクエストしてください。
-			 */
-			development = 0xff00,
+			updateTile = typeDraw, // タイルのアップデート
+			setCursorType, // Widget内でのカーソルの種類を設定
+			// 他、個別の描画指令
 		};
-		static const unsigned maxLen = 32768;
-		struct Head{
-			unsigned short len; //lenはmaxLen以下なのでMSBは0
-			unsigned short type; //typeのMSBは1
-			unsigned id;
-			unsigned timestamp;
-		}__attribute__((packed));;
-		struct Pack{
+		static constexpr unsigned maxElements = 32768 / sizeof(unsigned);
+
+		struct Head {
+			u32 len : 16;
+			u32 type : 16;
+			u32 id;
+			u32 timustamp;
+			u32 endianConvertElements;
+		};
+		struct Packet {
 			Head head;
-			unsigned char body[];
-		}__attribute__((packed));
+			u32 body[0];
+		};
 
-		/** 内容の取得
-		 */
-		Pack& GetContent() const { return body; };
-		template<typename T> operator T&() const { return *(T*)&body; };
-
-		/** 内容のダンプ
-		 */
-		void Dump() const;
-
-		/** メッセージ生成
-		 */
-		Message(Pack* const);
+		void Send(int fd);
 
 	protected:
-		Pack& body;
+		Message(
+			Packet& pack,
+			Type type,
+			unsigned id,
+			unsigned elements,
+			unsigned endianConvertElements)
+			: pack(pack) {
+			pack.head.type = type;
+			pack.head.len = elements;
+			pack.head.id = id;
+			pack.head.timustamp = GetTimestamp();
+			pack.head.endianConvertElements = endianConvertElements;
+		};
+		Message(Packet& pack) : pack(pack){};
+		virtual ~Message(){};
 
 	private:
-		void NotifyListDeleted(){ delete this; }; //つながってるList自体がなくなった時は消滅
+		Packet& pack;
+		void NotifyListDeleted() {
+			delete this;
+		}; // つながってるList自体がなくなった時は消滅
+		static unsigned GetTimestamp();
 	};
+
+
 
 	/** 受信用メッセージ
 	 */
-	class ReceivedMessage : public Message{
-		ReceivedMessage(const ReceivedMessage&);
-		void operator=(const ReceivedMessage&);
-	public:
-		ReceivedMessage() : Message((Pack*)buff){};
-	private:
-		unsigned buff[(maxLen + sizeof(unsigned) - 1) / sizeof(unsigned)];
+	struct ReceivedMessage : public Message {
+		ReceivedMessage() : Message(pack.pack){};
+		ReceivedMessage(int fd); // fdからをread
+
+	protected:
+		union Pack {
+			Packet pack;
+			u32 raw[maxElements];
+		} pack;
+
+		static void Reverse(u32*, unsigned elements);
+		void ReadBody(int);
 	};
 
-	/** len=0のメッセージ
+	/** bodyなしメッセージ
 	 */
-	class HeadMessage : public Message{
-		HeadMessage();
-		HeadMessage(const HeadMessage&);
-		void operator=(const HeadMessage&);
-	public:
-		HeadMessage(Types type) : Message(&pack){
-			pack.head.len = 0;
-			pack.head.type = type;
+	struct HeadMessage : public Message {
+		HeadMessage(Type type, unsigned id) : Message(pack, type, id, 0, 0){};
+
+	private:
+		Packet pack;
+	};
+
+	/***** 汎用bodyありメッセージ
+	 */
+	template <typename T> struct SomeMessage : public Message {
+		SomeMessage(
+			Packet& pack,
+			Type type,
+			unsigned id,
+			unsigned endianConvertElements)
+			: Message(pack, type, id, Elements(), endianConvertElements){};
+
+	private:
+		constexpr u16 Elements() {
+			return (sizeof(T) + sizeof(u32) - 1) / sizeof(u32);
 		};
-	private:
-		Pack pack;
 	};
 
- 	/** helo送信用メッセージ
- 	 */
-	class HeloMessage : public Message{
-		HeloMessage(const HeloMessage&);
-		void operator=(const HeloMessage&);
-	public:
-		HeloMessage() : Message((Pack*)&heloHead){};
-	private:
-		static Head heloHead;
-	};
- 	/** bye送信用メッセージ
- 	 */
-	class ByeMessage : public Message{
-		ByeMessage(const ByeMessage&);
-		void operator=(const ByeMessage&);
-	public:
-		ByeMessage() : Message((Pack*)&byeHead){};
-	private:
-		static Head byeHead;
-	};
-	/** spawnメッセージ
+	/** helo送信用メッセージ
 	 */
-	class SpawnMessage : public ReceivedMessage{
-		SpawnMessage();
-		SpawnMessage(const SpawnMessage&);
-		void operator=(const SpawnMessage&);
-	public:
-		SpawnMessage(const char*);
-	};
+	struct HeloMessage : public SomeMessage<Features> {
+		HeloMessage(const Features& helo, unsigned id)
+			: SomeMessage(pack.pack, Message::helo, id, 1){};
 
+	private:
+		struct {
+			Packet pack;
+			Features features;
+		} pack;
+	};
+	/** bye送信用メッセージ
+	 */
+	struct ByeMessage : public HeadMessage {
+		ByeMessage(unsigned id) : HeadMessage(Message::bye, id){};
+	};
+	/***** spawnメッセージ
+	 * pathが指す対象にIntentを適用し、起動したプロセスをidに結びつける
+	 */
+	struct SpawnMessage : public ReceivedMessage {
+		enum Intent : u8 {
+			open,
+		};
+		SpawnMessage(u32 id, Intent, const char* path);
+
+	private:
+		struct Body {
+			u32 id;
+			Intent intent;
+			char* target;
+		} __attribute__((packed))* const body;
+	};
 }

@@ -1,5 +1,5 @@
-/** canvas関連の共通定義
- * Copyright (C) 2017 tarosuke<webmaster@tarosuke.net>
+/*****************************************************************************
+ * Copyright (C) 2023 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,37 +18,15 @@
  */
 #pragma once
 
-#include "message.h"
+#include <toolbox/type.h>
+
 
 
 namespace wO {
-
-	struct Canvas {
-	protected:
-		struct Pack {
-			Message::Head head;
-			int left;
-			int top;
-			unsigned width;
-			unsigned height;
-			unsigned char buff[];
-		} __attribute__((packed));
-		static Pack& GetPack(Message&);
-
-
-		class UpdateMessage : public wO::Message {
-			UpdateMessage();
-			UpdateMessage(const UpdateMessage&);
-			void operator=(const UpdateMessage&);
-
-		public:
-			explicit UpdateMessage(
-				int x, int y, unsigned width, unsigned height);
-			Pack& GetPack() { return *(Pack*)packBody; };
-
-		private:
-			unsigned char packBody[maxElements];
+	union Features {
+		u32 raw[0];
+		struct {
+			unsigned dinplayDraw : 1; // Widget内の描画を画面側で
 		};
 	};
-
 }
