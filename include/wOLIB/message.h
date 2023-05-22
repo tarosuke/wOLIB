@@ -86,7 +86,8 @@ namespace wO {
 			u32 body[0];
 		};
 
-		void Send(int fd);
+		virtual ~Message(){};
+		void Send(int fd) const;
 
 	protected:
 		Message(
@@ -103,7 +104,6 @@ namespace wO {
 			pack.head.endianConvertElements = endianConvertElements;
 		};
 		Message(Packet& pack) : pack(pack){};
-		virtual ~Message(){};
 
 	private:
 		Packet& pack;

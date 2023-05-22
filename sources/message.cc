@@ -28,7 +28,15 @@
 #include <wOLIB/message.h>
 
 
+
 namespace wO {
+
+	void Message::Send(int fd) const {
+		const unsigned len(sizeof(Head) + pack.head.len * sizeof(u32));
+		if (write(fd, &pack, len) != len) {
+			throw -1;
+		}
+	}
 
 
 	ReceivedMessage::ReceivedMessage(int fd) : Message(pack.pack) {

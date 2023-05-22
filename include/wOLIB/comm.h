@@ -20,39 +20,29 @@
  */
 #pragma once
 
-class Resource;
 
-namespace wO{
+
+namespace wO {
 	class Message;
 
 	/** 指定したハンドルで入出力する端末
 	 */
-	class Comm{
+	class Comm {
 		Comm(const Comm&);
 		void operator=(const Comm&);
+
 	public:
-
-		struct Handles{
-			int read;
-			int write;
-		};
-
-		Comm(const Handles& h) :
-			readHandle(h.read), writeHandle(h.write){};
 		Comm(int r = 0, int w = 1) : readHandle(r), writeHandle(w){};
 		virtual ~Comm();
 
-		bool Send(const void*, unsigned);
-		bool Send(const Message&);
+		void Send(const Message&);
 
 	protected:
-
-		virtual bool OnMessage(Message&)=0;
+		virtual bool OnMessage(Message&) = 0; // メッセージ受信時
+		virtual void Close() = 0; // 回線切断など
 		void Run();
-		Message* ReceiveMessage();
 
 	private:
-
 		const int readHandle;
 		const int writeHandle;
 
