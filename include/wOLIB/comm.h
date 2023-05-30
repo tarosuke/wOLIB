@@ -39,7 +39,7 @@ namespace wO {
 
 	protected:
 		virtual bool OnMessage(Message&) = 0; // メッセージ受信時
-		virtual void Close() = 0; // 回線切断など
+		virtual void OnClosed() = 0; // 回線切断など
 		void Run();
 
 	private:

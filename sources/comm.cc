@@ -49,7 +49,7 @@ namespace wO {
 	void Comm::Send(const Message& m) {
 		try {
 			m.Send(writeHandle);
-		} catch (...) { Close(); }
+		} catch (...) { OnClosed(); }
 	}
 
 	/** メッセージを受信しては子クラスのOnMessageへ送る
@@ -60,7 +60,7 @@ namespace wO {
 				OnMessage(*m);
 				delete m;
 			}
-		} catch (...) { Close(); }
+		} catch (...) { OnClosed(); }
 	}
 
 }
