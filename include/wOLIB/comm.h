@@ -1,4 +1,4 @@
-/**
+/** 通信ポート
  * Copyright (C) 2017 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
@@ -15,36 +15,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
- *
- * スレッドを使うときはTB::Threadと多重継承してTB::Thread::ThreadBodyでRunを呼ぶ
  */
 #pragma once
+
+#include <toolbox/container/list.h>
 
 
 
 namespace wO {
 	class Message;
+	class Object;
 
-	/** 指定したハンドルで入出力する端末
+	/** 指定したハンドルでMessageをやり取りするポート
 	 */
-	class Comm {
-		Comm(const Comm&);
-		void operator=(const Comm&);
+	struct Comm {
+		Comm(const Comm&) = delete;
+		void operator=(const Comm&) = delete;
 
 	public:
 		Comm(int r = 0, int w = 1) : readHandle(r), writeHandle(w){};
 		virtual ~Comm();
 
+		void Register(Object&);
 		void Send(const Message&);
-
-	protected:
-		virtual bool OnMessage(Message&) = 0; // メッセージ受信時
-		virtual void OnClosed() = 0; // 回線切断など
-		void Run();
 
 	private:
 		const int readHandle;
 		const int writeHandle;
+		TB::List<Object> objects;
+		void Run();
 
 		bool Receive(void*, unsigned);
 	};

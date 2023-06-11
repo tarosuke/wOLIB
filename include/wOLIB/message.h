@@ -16,7 +16,6 @@
  * Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-
 #pragma once
 
 #include <toolbox/container/list.h>
@@ -87,19 +86,20 @@ namespace wO {
 		};
 
 		virtual ~Message(){};
+		void SetID(unsigned id) { pack.head.id = id; };
 		void Send(int fd) const;
+
+		operator Packet&() { return pack; };
 
 	protected:
 		Message(
 			Packet& pack,
 			Type type,
-			unsigned id,
 			unsigned elements,
 			unsigned endianConvertElements)
 			: pack(pack) {
 			pack.head.type = type;
 			pack.head.len = elements;
-			pack.head.id = id;
 			pack.head.timustamp = GetTimestamp();
 			pack.head.endianConvertElements = endianConvertElements;
 		};
@@ -119,7 +119,7 @@ namespace wO {
 	 */
 	struct ReceivedMessage : public Message {
 		ReceivedMessage() : Message(pack.pack){};
-		ReceivedMessage(int fd); // fdからをread
+		void Receive(int fd); // fdからread
 
 	protected:
 		union Pack {
@@ -134,7 +134,7 @@ namespace wO {
 	/** bodyなしメッセージ
 	 */
 	struct HeadMessage : public Message {
-		HeadMessage(Type type, unsigned id) : Message(pack, type, id, 0, 0){};
+		HeadMessage(Type type) : Message(pack, type, 0, 0){};
 
 	private:
 		Packet pack;
@@ -143,12 +143,8 @@ namespace wO {
 	/***** 汎用bodyありメッセージ
 	 */
 	template <typename T> struct SomeMessage : public Message {
-		SomeMessage(
-			Packet& pack,
-			Type type,
-			unsigned id,
-			unsigned endianConvertElements)
-			: Message(pack, type, id, Elements(), endianConvertElements){};
+		SomeMessage(Packet& pack, Type type, unsigned endianConvertElements)
+			: Message(pack, type, Elements(), endianConvertElements){};
 
 	private:
 		constexpr u16 Elements() {
@@ -159,8 +155,8 @@ namespace wO {
 	/** helo送信用メッセージ
 	 */
 	struct HeloMessage : public SomeMessage<Features> {
-		HeloMessage(const Features& helo, unsigned id)
-			: SomeMessage(pack.pack, Message::helo, id, 1){};
+		HeloMessage(const Features& helo)
+			: SomeMessage(pack.pack, Message::helo, 1){};
 
 	private:
 		struct {
@@ -171,22 +167,6 @@ namespace wO {
 	/** bye送信用メッセージ
 	 */
 	struct ByeMessage : public HeadMessage {
-		ByeMessage(unsigned id) : HeadMessage(Message::bye, id){};
-	};
-	/***** spawnメッセージ
-	 * pathが指す対象にIntentを適用し、起動したプロセスをidに結びつける
-	 */
-	struct SpawnMessage : public ReceivedMessage {
-		enum Intent : u8 {
-			open,
-		};
-		SpawnMessage(u32 id, Intent, const char* path);
-
-	private:
-		struct Body {
-			u32 id;
-			Intent intent;
-			char* target;
-		} __attribute__((packed))* const body;
+		ByeMessage() : HeadMessage(Message::bye){};
 	};
 }

@@ -39,7 +39,7 @@ namespace wO {
 	}
 
 
-	ReceivedMessage::ReceivedMessage(int fd) : Message(pack.pack) {
+	void ReceivedMessage::Receive(int fd) {
 		// ヘッダ読み
 		if (read(fd, &pack.pack.head, sizeof(Head)) < (int)sizeof(Head)) {
 			throw -1;
@@ -74,20 +74,4 @@ namespace wO {
 		}
 	}
 
-
-	SpawnMessage::SpawnMessage(u32 id, Intent intent, const char* path)
-		: body((Body*)pack.pack.body) {
-		const unsigned pathLen(strlen(path));
-
-		pack.pack.head.len = sizeof(body) + pathLen;
-		if (maxElements * sizeof(u32) < pack.pack.head.len) {
-			// パス長すぎ
-			throw -1;
-		}
-		strcpy(body->target, path);
-		pack.pack.head.id = id;
-		pack.pack.head.len = 2 + (pathLen + sizeof(u32) - 1) / sizeof(u32);
-		pack.pack.head.endianConvertElements = 2;
-		pack.pack.head.type = spawn;
-	}
 }

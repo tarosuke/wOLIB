@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2017 tarosuke<webmaster@tarosuke.net>
+/*
+ * Copyright (C) 2023 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,10 +16,6 @@
  * Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-#include <unistd.h>
-
-#include <wOLIB/comm.h>
-#include <wOLIB/debug.h>
 #include <wOLIB/message.h>
 #include <wOLIB/object.h>
 
@@ -27,34 +23,19 @@
 
 namespace wO {
 
-	void Comm::Register(Object& o) { objects.Add(o); }
+	Object::Object(Comm& comm) : TB::Table::Node(table), comm(comm) {
+		comm.Register(*this);
+	}
+	Object::Object(Comm& comm, unsigned id)
+		: TB::Table::Node(table, id), comm(comm) {
+		comm.Register(*this);
+	}
 
-	Comm::~Comm() {
-		if (0 <= readHandle) {
-			close(readHandle);
+	void Object::OnMessage(Message& m) {
+		Message::Packet& p(m);
+		Object* const o(dynamic_cast<Object*>(table[p.head.id]));
+		if (o) {
+			o->OnMessage(p);
 		}
-		if (0 <= writeHandle) {
-			close(writeHandle);
-		}
 	}
-
-	/**** メッセージ送信
-	 */
-	void Comm::Send(const Message& m) {
-		try {
-			m.Send(writeHandle);
-		} catch (...) { delete this; }
-	}
-
-	/** メッセージを受信してはObject::OnMessageへ流す
-	 */
-	void Comm::Run() {
-		try {
-			for (ReceivedMessage m;;) {
-				m.Receive(readHandle);
-				Object::OnMessage(m);
-			}
-		} catch (...) { delete this; }
-	}
-
 }

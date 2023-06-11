@@ -1,5 +1,5 @@
-/**
- * Copyright (C) 2017 tarosuke<webmaster@tarosuke.net>
+/*
+ * Copyright (C) 2023 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -16,45 +16,32 @@
  * Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-#include <unistd.h>
+#pragma once
 
+#include <toolbox/container/list.h>
+#include <toolbox/container/table.h>
 #include <wOLIB/comm.h>
-#include <wOLIB/debug.h>
 #include <wOLIB/message.h>
-#include <wOLIB/object.h>
 
 
 
 namespace wO {
 
-	void Comm::Register(Object& o) { objects.Add(o); }
+	struct Object : private TB::Table::Node, TB::List<Object>::Node {
+		Object() = delete;
+		Object(Comm&); // Commの先にペアを作成
+		Object(Comm&, unsigned id); // ペア作成のためにID指定
 
-	Comm::~Comm() {
-		if (0 <= readHandle) {
-			close(readHandle);
-		}
-		if (0 <= writeHandle) {
-			close(writeHandle);
-		}
-	}
+		void Send(Message&); // ペアオブジェクトに届く
+		static void OnMessage(Message&); // IDのObjectへOnMessage
 
-	/**** メッセージ送信
-	 */
-	void Comm::Send(const Message& m) {
-		try {
-			m.Send(writeHandle);
-		} catch (...) { delete this; }
-	}
+	protected:
+		virtual void OnMessage(Message::Packet&){};
+		virtual ~Object();
 
-	/** メッセージを受信してはObject::OnMessageへ流す
-	 */
-	void Comm::Run() {
-		try {
-			for (ReceivedMessage m;;) {
-				m.Receive(readHandle);
-				Object::OnMessage(m);
-			}
-		} catch (...) { delete this; }
-	}
-
+	private:
+		static TB::Table table;
+		Comm& comm;
+		bool byed;
+	};
 }
