@@ -23,11 +23,13 @@
 
 namespace wO {
 
-	Object::Object(Comm& comm) : TB::Table::Node(table), comm(comm) {
+	TB::Table<Object> Object::table;
+
+	Object::Object(Comm& comm) : TB::TableBase::Node(table), comm(comm) {
 		comm.Register(*this);
 	}
 	Object::Object(Comm& comm, unsigned id)
-		: TB::Table::Node(table, id), comm(comm) {
+		: TB::TableBase::Node(table, id), comm(comm) {
 		comm.Register(*this);
 	}
 

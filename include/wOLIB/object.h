@@ -27,7 +27,7 @@
 
 namespace wO {
 
-	struct Object : private TB::Table::Node, TB::List<Object>::Node {
+	struct Object : private TB::TableBase::Node, TB::List<Object>::Node {
 		Object() = delete;
 		Object(Comm&); // Commの先にペアを作成
 		Object(Comm&, unsigned id); // ペア作成のためにID指定
@@ -37,10 +37,10 @@ namespace wO {
 
 	protected:
 		virtual void OnMessage(Message::Packet&){};
-		virtual ~Object();
+		virtual ~Object(){};
 
 	private:
-		static TB::Table table;
+		static TB::Table<Object> table;
 		Comm& comm;
 		bool byed;
 	};
