@@ -36,8 +36,8 @@ namespace wO {
 		static void OnMessage(Message&); // IDのObjectへOnMessage
 
 	protected:
-		virtual void OnMessage(Message::Packet&){};
-		virtual ~Object(){};
+		virtual void OnMessage(Message::Packet&) {};
+		virtual ~Object() {};
 
 	private:
 		static TB::Table<Object> table;
