@@ -18,8 +18,8 @@
  */
 #pragma once
 
-#include <toolbox/container/list.h>
-#include <toolbox/type.h>
+#include <tb/list.h>
+#include <tb/types.h>
 
 #include <wOLIB/feature.h>
 
@@ -27,7 +27,7 @@
 
 namespace wO {
 
-	struct Message : public TB::List<Message>::Node {
+	struct Message : public tb::List<Message>::Node {
 		Message() = delete;
 		Message(const Message&) = delete;
 		void operator=(const Message&) = delete;
@@ -35,17 +35,17 @@ namespace wO {
 		/* メッセージID
 		 * エンディアン検出のため最上位ビットが1
 		 */
-		static constexpr u16 typeSystem = 0x8900;
-		static constexpr u16 typeWidget = 0x8100;
-		static constexpr u16 typeDraw = 0x8200;
-		enum Type : u16 {
+		static constexpr tb::u16 typeSystem = 0x8900;
+		static constexpr tb::u16 typeWidget = 0x8100;
+		static constexpr tb::u16 typeDraw = 0x8200;
+		enum Type : tb::u16 {
 			/** システムメッセージ
 			 */
 			helo = typeSystem,
 			commID,
-			bye, // 切断予告
+			bye,		  // 切断予告
 			disconnected, // 切断された場合にwOSH / wODMが通知
-			spawn, // 新たに何かを開くとき
+			spawn,		  // 新たに何かを開くとき
 			// 他、システムアラートなどを予定
 
 			/** Widget関連
@@ -69,31 +69,30 @@ namespace wO {
 			 */
 			updateTile = typeDraw, // タイルのアップデート
 			setCursorType, // Widget内でのカーソルの種類を設定
-			// 他、個別の描画指令
+						   // 他、個別の描画指令
 		};
 		static constexpr unsigned maxElements = 32768 / sizeof(unsigned);
 
 		struct Head {
-			u32 len : 16;
-			u32 type : 16;
-			u32 id;
-			u32 timustamp;
-			u32 endianConvertElements;
+			tb::u32 len : 16;
+			tb::u32 type : 16;
+			tb::u32 id;
+			tb::u32 timustamp;
+			tb::u32 endianConvertElements;
 		};
 		struct Packet {
 			Head head;
-			u32 body[0];
+			tb::u32 body[0];
 		};
 
-		virtual ~Message(){};
+		virtual ~Message() {};
 		void SetID(unsigned id) { pack.head.id = id; };
 		void Send(int fd) const;
 
 		operator Packet&() { return pack; };
 
 	protected:
-		Message(
-			Packet& pack,
+		Message(Packet& pack,
 			Type type,
 			unsigned elements,
 			unsigned endianConvertElements)
@@ -103,7 +102,7 @@ namespace wO {
 			pack.head.timustamp = GetTimestamp();
 			pack.head.endianConvertElements = endianConvertElements;
 		};
-		Message(Packet& pack) : pack(pack){};
+		Message(Packet& pack) : pack(pack) {};
 
 	private:
 		Packet& pack;
@@ -118,23 +117,23 @@ namespace wO {
 	/** 受信用メッセージ
 	 */
 	struct ReceivedMessage : public Message {
-		ReceivedMessage() : Message(pack.pack){};
+		ReceivedMessage() : Message(pack.pack) {};
 		void Receive(int fd); // fdからread
 
 	protected:
 		union Pack {
 			Packet pack;
-			u32 raw[maxElements];
+			tb::u32 raw[maxElements];
 		} pack;
 
-		static void Reverse(u32*, unsigned elements);
+		static void Reverse(tb::u32*, unsigned elements);
 		void ReadBody(int);
 	};
 
 	/** bodyなしメッセージ
 	 */
 	struct HeadMessage : public Message {
-		HeadMessage(Type type) : Message(pack, type, 0, 0){};
+		HeadMessage(Type type) : Message(pack, type, 0, 0) {};
 
 	private:
 		Packet pack;
@@ -144,11 +143,11 @@ namespace wO {
 	 */
 	template <typename T> struct SomeMessage : public Message {
 		SomeMessage(Packet& pack, Type type, unsigned endianConvertElements)
-			: Message(pack, type, Elements(), endianConvertElements){};
+			: Message(pack, type, Elements(), endianConvertElements) {};
 
 	private:
 		constexpr u16 Elements() {
-			return (sizeof(T) + sizeof(u32) - 1) / sizeof(u32);
+			return (sizeof(T) + sizeof(tb::u32) - 1) / sizeof(tb::u32);
 		};
 	};
 
@@ -156,7 +155,7 @@ namespace wO {
 	 */
 	struct HeloMessage : public SomeMessage<Features> {
 		HeloMessage(const Features& helo)
-			: SomeMessage(pack.pack, Message::helo, 1){};
+			: SomeMessage(pack.pack, Message::helo, 1) {};
 
 	private:
 		struct {
@@ -167,6 +166,6 @@ namespace wO {
 	/** bye送信用メッセージ
 	 */
 	struct ByeMessage : public HeadMessage {
-		ByeMessage() : HeadMessage(Message::bye){};
+		ByeMessage() : HeadMessage(Message::bye) {};
 	};
 }

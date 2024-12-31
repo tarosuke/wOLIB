@@ -18,8 +18,7 @@
  */
 #pragma once
 
-#include <toolbox/container/list.h>
-#include <toolbox/container/table.h>
+#include <tb/table.h>
 #include <wOLIB/comm.h>
 #include <wOLIB/message.h>
 
@@ -27,12 +26,12 @@
 
 namespace wO {
 
-	struct Object : private TB::TableBase::Node, TB::List<Object>::Node {
+	struct Object : private tb::Table<Object>::Node, tb::List<Object>::Node {
 		Object() = delete;
-		Object(Comm&); // Commの先にペアを作成
+		Object(Comm&);				// Commの先にペアを作成
 		Object(Comm&, unsigned id); // ペア作成のためにID指定
 
-		void Send(Message&); // ペアオブジェクトに届く
+		void Send(Message&);			 // ペアオブジェクトに届く
 		static void OnMessage(Message&); // IDのObjectへOnMessage
 
 	protected:
@@ -40,7 +39,7 @@ namespace wO {
 		virtual ~Object() {};
 
 	private:
-		static TB::Table<Object> table;
+		static tb::Table<Object> table;
 		Comm& comm;
 		bool byed;
 	};

@@ -18,7 +18,7 @@
  */
 #pragma once
 
-#include <toolbox/container/list.h>
+#include <tb/list.h>
 
 
 
@@ -33,7 +33,7 @@ namespace wO {
 		void operator=(const Comm&) = delete;
 
 	public:
-		Comm(int r = 0, int w = 1) : readHandle(r), writeHandle(w){};
+		Comm(int r = 0, int w = 1) : readHandle(r), writeHandle(w) {};
 		virtual ~Comm();
 
 		void Register(Object&);
@@ -42,7 +42,7 @@ namespace wO {
 	private:
 		const int readHandle;
 		const int writeHandle;
-		TB::List<Object> objects;
+		tb::List<Object> objects;
 		void Run();
 
 		bool Receive(void*, unsigned);
