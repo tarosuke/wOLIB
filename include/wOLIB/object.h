@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 tarosuke<webmaster@tarosuke.net>
+ * Copyright (C) 2023,2025 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,29 +18,22 @@
  */
 #pragma once
 
-#include <tb/table.h>
 #include <wOLIB/comm.h>
-#include <wOLIB/message.h>
 
 
 
 namespace wO {
 
-	struct Object : private tb::Table<Object>::Node, tb::List<Object>::Node {
-		Object() = delete;
-		Object(Comm&);				// Commの先にペアを作成
-		Object(Comm&, unsigned id); // ペア作成のためにID指定
+	struct Message;
 
-		void Send(Message&);			 // ペアオブジェクトに届く
-		static void OnMessage(Message&); // IDのObjectへOnMessage
+	struct Object : Comm::Node {
+		Object(Comm& c) : Comm::Node(c) {};
+
+		virtual void OnMessage(const Message&) {};
 
 	protected:
-		virtual void OnMessage(Message::Packet&) {};
 		virtual ~Object() {};
 
 	private:
-		static tb::Table<Object> table;
-		Comm& comm;
-		bool byed;
 	};
 }

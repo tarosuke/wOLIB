@@ -1,5 +1,5 @@
 /** 通信ポート
- * Copyright (C) 2017 tarosuke<webmaster@tarosuke.net>
+ * Copyright (C) 2017,2025 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,13 +18,13 @@
  */
 #pragma once
 
-#include <tb/list.h>
+#include <wOLIB/message.h>
 
 
 
 namespace wO {
-	class Message;
-	class Object;
+
+	struct Object;
 
 	/** 指定したハンドルでMessageをやり取りするポート
 	 */
@@ -33,11 +33,31 @@ namespace wO {
 		void operator=(const Comm&) = delete;
 
 	public:
+		struct Node {
+			Node() = delete;
+			Node(const Node&) = delete;
+			void operator=(const Node&) = delete;
+
+			Node(Comm& c) : comm(c) { c.Register(*this); };
+			virtual ~Node() {};
+
+		protected:
+			void Send(Message&);
+
+		private:
+			Comm& comm;
+		};
+
+
 		Comm(int r = 0, int w = 1) : readHandle(r), writeHandle(w) {};
 		virtual ~Comm();
 
 		void Register(Object&);
-		void Send(const Message&);
+		void Send(Message&);
+
+	protected:
+		virtual void Register(Node&) = 0;
+		virtual void OnMessage(const Message&) = 0;
 
 	private:
 		const int readHandle;
@@ -47,5 +67,4 @@ namespace wO {
 
 		bool Receive(void*, unsigned);
 	};
-
 }

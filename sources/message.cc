@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2017, 2023 tarosuke<webmaster@tarosuke.net>
+ * Copyright (C) 2017,2023,2025 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,6 +23,7 @@
 #include <syslog.h>
 #include <unistd.h>
 
+#include <tb/time.h>
 #include <wOLIB/comm.h>
 #include <wOLIB/debug.h>
 #include <wOLIB/message.h>
@@ -31,44 +32,52 @@
 
 namespace wO {
 
-	void Message::Send(int fd) const {
-		const unsigned len(sizeof(Head) + pack.head.len * sizeof(u32));
-		if (write(fd, &pack, len) != len) {
+	void Message::Send(int fd) {
+		head.elements = (size() + 3) / 4;
+		head.timestamp = tb::msec(tb::Timestamp().Uptime());
+		Reverse((tb::u32*)&head, headElements);
+		if (write(fd, &head, sizeof(Head)) != sizeof(Head)) {
 			throw -1;
+		}
+		if (head.elements) {
+			Reverse(data(), size());
+			const unsigned len(sizeof(Head) + head.elements * sizeof(u32));
+			if (write(fd, data(), len) != len) {
+				throw -1;
+			}
 		}
 	}
 
 
-	void ReceivedMessage::Receive(int fd) {
+	void Message::Receive(int fd) {
 		// ヘッダ読み
-		if (read(fd, &pack.pack.head, sizeof(Head)) < (int)sizeof(Head)) {
+		if (read(fd, &head, sizeof(Head)) != (int)sizeof(Head)) {
 			throw -1;
 		}
 
 		// エンディアンチェック
-		if (0 <= (i16)pack.pack.head.type) {
-			Reverse((u32*)&pack.pack.head, sizeof(Head) / sizeof(u32));
+		if (0 <= (i16)head.type) {
+			Reverse((u32*)&head, sizeof(Head) / sizeof(u32));
 			ReadBody(fd);
-			Reverse(
-				pack.pack.body,
-				pack.pack.head.endianConvertElements * sizeof(u32));
+			Reverse(data(), head.endianConvertElements);
 		} else {
 			ReadBody(fd);
 		}
 	}
 
-	void ReceivedMessage::Reverse(u32* body, unsigned elements) {
+	void Message::Reverse(u32* body, unsigned elements) {
 		for (; elements--; ++body) {
 			*body = (*body >> 24) | ((*body >> 8) & 0xff00) |
 					((*body << 8) & 0xff0000) | (*body << 24);
 		}
 	}
 
-	void ReceivedMessage::ReadBody(int fd) {
-		if (pack.pack.head.len) {
-			const unsigned len(pack.pack.head.len * sizeof(u32));
+	void Message::ReadBody(int fd) {
+		if (head.elements) {
+			const unsigned len(head.elements * sizeof(u32));
 			/// body読み
-			if (read(fd, pack.pack.body, len) < len) {
+			resize(head.elements);
+			if (read(fd, data(), len) != len) {
 				throw -1;
 			}
 		}

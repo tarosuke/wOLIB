@@ -1,5 +1,4 @@
-/****************************************************************** Message
- * Copyright (C) 2017, 2023 tarosuke<webmaster@tarosuke.net>
+/* Copyright (C) 2017,2023,2025 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -23,11 +22,13 @@
 
 #include <wOLIB/feature.h>
 
+#include <vector>
+
 
 
 namespace wO {
 
-	struct Message : public tb::List<Message>::Node {
+	struct Message : public tb::List<Message>::Node, std::vector<tb::u32> {
 		Message() = delete;
 		Message(const Message&) = delete;
 		void operator=(const Message&) = delete;
@@ -74,98 +75,32 @@ namespace wO {
 		static constexpr unsigned maxElements = 32768 / sizeof(unsigned);
 
 		struct Head {
-			tb::u32 len : 16;
+			tb::u32 elements : 16;
 			tb::u32 type : 16;
 			tb::u32 id;
-			tb::u32 timustamp;
+			tb::u32 timestamp;
 			tb::u32 endianConvertElements;
 		};
-		struct Packet {
-			Head head;
-			tb::u32 body[0];
-		};
+		static constexpr unsigned headElements = (sizeof(Head) + 3) / 4;
+		Head head;
 
-		virtual ~Message() {};
-		void SetID(unsigned id) { pack.head.id = id; };
-		void Send(int fd) const;
+		std::vector<tb::u32>& Body() { return *this; };
+		void Resize(unsigned s) { resize((s * 3) / sizeof(tb::u32)); };
+		void Send(int fd); // NOTE:Sendするとメッセージは壊れる
 
-		operator Packet&() { return pack; };
-
-	protected:
-		Message(Packet& pack,
-			Type type,
-			unsigned elements,
-			unsigned endianConvertElements)
-			: pack(pack) {
-			pack.head.type = type;
-			pack.head.len = elements;
-			pack.head.timustamp = GetTimestamp();
-			pack.head.endianConvertElements = endianConvertElements;
-		};
-		Message(Packet& pack) : pack(pack) {};
+		Message(int fd) { Receive(fd); };
+		Message(tb::u32 id, Type type, unsigned endianConvertElements = 0)
+			: head{.elements = 0,
+				  .type = type,
+				  .id = id,
+				  .endianConvertElements = endianConvertElements} {};
 
 	private:
-		Packet& pack;
 		void NotifyListDeleted() {
 			delete this;
 		}; // つながってるList自体がなくなった時は消滅
-		static unsigned GetTimestamp();
-	};
-
-
-
-	/** 受信用メッセージ
-	 */
-	struct ReceivedMessage : public Message {
-		ReceivedMessage() : Message(pack.pack) {};
-		void Receive(int fd); // fdからread
-
-	protected:
-		union Pack {
-			Packet pack;
-			tb::u32 raw[maxElements];
-		} pack;
-
-		static void Reverse(tb::u32*, unsigned elements);
+		void Receive(int);
 		void ReadBody(int);
-	};
-
-	/** bodyなしメッセージ
-	 */
-	struct HeadMessage : public Message {
-		HeadMessage(Type type) : Message(pack, type, 0, 0) {};
-
-	private:
-		Packet pack;
-	};
-
-	/***** 汎用bodyありメッセージ
-	 */
-	template <typename T> struct SomeMessage : public Message {
-		SomeMessage(Packet& pack, Type type, unsigned endianConvertElements)
-			: Message(pack, type, Elements(), endianConvertElements) {};
-
-	private:
-		constexpr u16 Elements() {
-			return (sizeof(T) + sizeof(tb::u32) - 1) / sizeof(tb::u32);
-		};
-	};
-
-	/** helo送信用メッセージ
-	 */
-	struct HeloMessage : public SomeMessage<Features> {
-		HeloMessage(const Features& helo)
-			: SomeMessage(pack.pack, Message::helo, 1) {};
-
-	private:
-		struct {
-			Packet pack;
-			Features features;
-		} pack;
-	};
-	/** bye送信用メッセージ
-	 */
-	struct ByeMessage : public HeadMessage {
-		ByeMessage() : HeadMessage(Message::bye) {};
+		void Reverse(tb::u32* body, unsigned elements);
 	};
 }

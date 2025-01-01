@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2017 tarosuke<webmaster@tarosuke.net>
+ * Copyright (C) 2017,2025 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,8 +27,6 @@
 
 namespace wO {
 
-	void Comm::Register(Object& o) { objects.Add(o); }
-
 	Comm::~Comm() {
 		if (0 <= readHandle) {
 			close(readHandle);
@@ -40,7 +38,7 @@ namespace wO {
 
 	/**** メッセージ送信
 	 */
-	void Comm::Send(const Message& m) {
+	void Comm::Send(Message& m) {
 		try {
 			m.Send(writeHandle);
 		} catch (...) { delete this; }
@@ -50,9 +48,9 @@ namespace wO {
 	 */
 	void Comm::Run() {
 		try {
-			for (ReceivedMessage m;;) {
-				m.Receive(readHandle);
-				Object::OnMessage(m);
+			for (;;) {
+				Message m(readHandle);
+				OnMessage(m);
 			}
 		} catch (...) { delete this; }
 	}
