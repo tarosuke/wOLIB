@@ -33,16 +33,15 @@
 namespace wO {
 
 	void Message::Send(int fd) {
-		head.elements = (size() + 3) / 4;
-		head.timestamp = tb::msec(tb::Timestamp().Uptime());
-		Reverse((tb::u32*)&head, headElements);
-		if (write(fd, &head, sizeof(Head)) != sizeof(Head)) {
+		pack.timestamp = tb::msec(tb::Timestamp().Uptime());
+		Reverse((tb::u32*)&pack, headElements);
+		if (write(fd, &pack, sizeof(Pack)) != sizeof(Pack)) {
 			throw -1;
 		}
-		if (head.elements) {
-			Reverse(data(), size());
-			const unsigned len(sizeof(Head) + head.elements * sizeof(u32));
-			if (write(fd, data(), len) != len) {
+		if (pack.elements) {
+			Reverse(pack.body, pack.endianConvertElements);
+			const unsigned len(sizeof(Pack) + pack.elements * sizeof(u32));
+			if (write(fd, pack.body, len) != len) {
 				throw -1;
 			}
 		}
@@ -51,15 +50,15 @@ namespace wO {
 
 	void Message::Receive(int fd) {
 		// ヘッダ読み
-		if (read(fd, &head, sizeof(Head)) != (int)sizeof(Head)) {
+		if (read(fd, &pack, sizeof(Pack)) != (int)sizeof(Pack)) {
 			throw -1;
 		}
 
 		// エンディアンチェック
-		if (0 <= (i16)head.type) {
-			Reverse((u32*)&head, sizeof(Head) / sizeof(u32));
+		if (0 <= (i16)pack.type) {
+			Reverse((u32*)&pack, sizeof(Pack) / sizeof(u32));
 			ReadBody(fd);
-			Reverse(data(), head.endianConvertElements);
+			Reverse((tb::u32*)&pack, pack.endianConvertElements);
 		} else {
 			ReadBody(fd);
 		}
@@ -73,11 +72,10 @@ namespace wO {
 	}
 
 	void Message::ReadBody(int fd) {
-		if (head.elements) {
-			const unsigned len(head.elements * sizeof(u32));
+		if (pack.elements) {
+			const unsigned len(pack.elements * sizeof(u32));
 			/// body読み
-			resize(head.elements);
-			if (read(fd, data(), len) != len) {
+			if (read(fd, pack.body, len) != len) {
 				throw -1;
 			}
 		}

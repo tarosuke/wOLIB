@@ -38,7 +38,7 @@ namespace wO {
 			Node(const Node&) = delete;
 			void operator=(const Node&) = delete;
 
-			Node(Comm& c) : comm(c) { c.Register(*this); };
+			Node(Comm& c) : comm(c) {};
 			virtual ~Node() {};
 
 		protected:
@@ -51,19 +51,18 @@ namespace wO {
 
 		Comm(int r = 0, int w = 1) : readHandle(r), writeHandle(w) {};
 		virtual ~Comm();
+		void Run();
 
 		void Register(Object&);
 		void Send(Message&);
 
 	protected:
-		virtual void Register(Node&) = 0;
-		virtual void OnMessage(const Message&) = 0;
+		virtual bool OnMessage(Message&) = 0; // 偽なら終了
 
 	private:
 		const int readHandle;
 		const int writeHandle;
 		tb::List<Object> objects;
-		void Run();
 
 		bool Receive(void*, unsigned);
 	};

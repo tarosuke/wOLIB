@@ -18,6 +18,7 @@
  */
 #pragma once
 
+#include <tb/types.h>
 #include <wOLIB/comm.h>
 
 
@@ -27,11 +28,13 @@ namespace wO {
 	struct Message;
 
 	struct Object : Comm::Node {
-		Object(Comm& c) : Comm::Node(c) {};
+		using I = tb::u32;
+		static constexpr I invalidID = ~(I)0;
 
 		virtual void OnMessage(const Message&) {};
 
 	protected:
+		Object(Comm& c) : Comm::Node(c) {};
 		virtual ~Object() {};
 
 	private:

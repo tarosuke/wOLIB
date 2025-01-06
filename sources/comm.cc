@@ -49,8 +49,10 @@ namespace wO {
 	void Comm::Run() {
 		try {
 			for (;;) {
-				Message m(readHandle);
-				OnMessage(m);
+				ReceivedMessage m(readHandle);
+				if (!OnMessage(m)) {
+					return;
+				}
 			}
 		} catch (...) { delete this; }
 	}

@@ -22,13 +22,14 @@
 
 #include <wOLIB/feature.h>
 
-#include <vector>
-
+// TODO:送信がヘッダとボディに分かれるとコンテキストスイッチが入る可能性があるのでバッファの持ち方を旧来の方法へ変更
+// TODO:Messageそれ自体が扱うのはヘッダのみ
+// TODO:バッファは得側が確保して汎に与える(汎側ではパケットの参照として持つ)
 
 
 namespace wO {
 
-	struct Message : public tb::List<Message>::Node, std::vector<tb::u32> {
+	struct Message : public tb::List<Message>::Node {
 		Message() = delete;
 		Message(const Message&) = delete;
 		void operator=(const Message&) = delete;
@@ -44,6 +45,7 @@ namespace wO {
 			 */
 			helo = typeSystem,
 			commID,
+			newObject,	  // Qbject生成
 			bye,		  // 切断予告
 			disconnected, // 切断された場合にwOSH / wODMが通知
 			spawn,		  // 新たに何かを開くとき
@@ -74,33 +76,60 @@ namespace wO {
 		};
 		static constexpr unsigned maxElements = 32768 / sizeof(unsigned);
 
-		struct Head {
+		struct Pack {
 			tb::u32 elements : 16;
 			tb::u32 type : 16;
 			tb::u32 id;
 			tb::u32 timestamp;
 			tb::u32 endianConvertElements;
-		};
-		static constexpr unsigned headElements = (sizeof(Head) + 3) / 4;
-		Head head;
+			tb::u32 body[0];
+		} & pack;
+		static constexpr unsigned headElements = (sizeof(Pack) + 3) / 4;
 
-		std::vector<tb::u32>& Body() { return *this; };
-		void Resize(unsigned s) { resize((s * 3) / sizeof(tb::u32)); };
 		void Send(int fd); // NOTE:Sendするとメッセージは壊れる
 
-		Message(int fd) { Receive(fd); };
-		Message(tb::u32 id, Type type, unsigned endianConvertElements = 0)
-			: head{.elements = 0,
-				  .type = type,
-				  .id = id,
-				  .endianConvertElements = endianConvertElements} {};
+		Message(Pack& p) : pack(p) {};
+
+		tb::u32 Elements() const { return pack.elements; };
+		tb::u32 Type() const { return pack.type; };
+		tb::u32 ID() const { return pack.id; };
+
+	protected:
+		void Receive(int);
 
 	private:
 		void NotifyListDeleted() {
 			delete this;
 		}; // つながってるList自体がなくなった時は消滅
-		void Receive(int);
 		void ReadBody(int);
 		void Reverse(tb::u32* body, unsigned elements);
+	};
+
+	struct BufferdMessage : public Message {
+	protected:
+		BufferdMessage() : Message(pack.pack) {};
+
+	private:
+		union {
+			Pack pack;
+			tb::u32 raw[maxElements];
+		} pack;
+	};
+
+	struct ReceivedMessage : public BufferdMessage {
+
+		ReceivedMessage(int fd) { Receive(fd); };
+	};
+
+	struct HeadMessage : public Message {
+		HeadMessage(tb::u32 type, tb::u32 id, tb::u32 nEce = 0)
+			: Message(pack),
+			  pack{.elements = 0,
+				  .type = type,
+				  .id = id,
+				  .endianConvertElements = nEce} {}
+
+	private:
+		Pack pack;
 	};
 }
