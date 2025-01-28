@@ -21,10 +21,8 @@
 #include <tb/types.h>
 
 #include <wOLIB/feature.h>
+#include <wOLIB/object.h>
 
-// TODO:送信がヘッダとボディに分かれるとコンテキストスイッチが入る可能性があるのでバッファの持ち方を旧来の方法へ変更
-// TODO:Messageそれ自体が扱うのはヘッダのみ
-// TODO:バッファは得側が確保して汎に与える(汎側ではパケットの参照として持つ)
 
 
 namespace wO {
@@ -46,6 +44,7 @@ namespace wO {
 			helo = typeSystem,
 			commID,
 			newObject,	  // Qbject生成
+			deleted,	  // Object消滅を通知
 			bye,		  // 切断予告
 			disconnected, // 切断された場合にwOSH / wODMが通知
 			spawn,		  // 新たに何かを開くとき
@@ -131,5 +130,26 @@ namespace wO {
 
 	private:
 		Pack pack;
+	};
+
+
+	struct NewObjectMessage : public Message {
+		enum Type : tb::u32 {
+			Pane,
+		};
+		struct Pack {
+			Message::Pack pack;
+			tb::u32 objectType;
+		} pack;
+
+		NewObjectMessage(Object::I id, Type objectType)
+			: Message(pack.pack),
+			  pack{.pack{.elements = 1,
+					   .type = Message::newObject,
+					   .id = id,
+					   .endianConvertElements = 0},
+				  .objectType = objectType} {};
+
+	private:
 	};
 }

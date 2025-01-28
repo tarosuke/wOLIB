@@ -18,13 +18,14 @@
  */
 #pragma once
 
-#include <wOLIB/message.h>
+#include <tb/list.h>
 
 
 
 namespace wO {
 
 	struct Object;
+	struct Message;
 
 	/** 指定したハンドルでMessageをやり取りするポート
 	 */
