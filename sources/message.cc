@@ -23,7 +23,6 @@
 #include <syslog.h>
 #include <unistd.h>
 
-#include <tb/time.h>
 #include <wOLIB/comm.h>
 #include <wOLIB/debug.h>
 #include <wOLIB/message.h>
@@ -32,53 +31,30 @@
 
 namespace wO {
 
-	void Message::Send(int fd) {
-		pack.timestamp = tb::msec(tb::Timestamp().Uptime());
-		Reverse((tb::u32*)&pack, headElements);
-		if (write(fd, &pack, sizeof(Pack)) != sizeof(Pack)) {
-			throw -1;
-		}
-		if (pack.elements) {
-			Reverse(pack.body, pack.endianConvertElements);
-			const unsigned len(sizeof(Pack) + pack.elements * sizeof(u32));
-			if (write(fd, pack.body, len) != len) {
-				throw -1;
-			}
-		}
-	}
+	void Message::Send(Comm& c) { c.Send((void*)&pack, pack.nElement); };
 
 
-	void Message::Receive(int fd) {
+
+	void ReceivedMessage::Hear(Comm& c) {
 		// ヘッダ読み
-		if (read(fd, &pack, sizeof(Pack)) != (int)sizeof(Pack)) {
-			throw -1;
-		}
+		c.Hear(&pack, packNElement);
 
 		// エンディアンチェック
-		if (0 <= (i16)pack.type) {
+		if (Message::pack.type & 0x8000) {
 			Reverse((u32*)&pack, sizeof(Pack) / sizeof(u32));
-			ReadBody(fd);
+			c.Hear(pack.body, pack.nElement);
 			Reverse((tb::u32*)&pack, pack.endianConvertElements);
 		} else {
-			ReadBody(fd);
+			c.Hear(pack.body, pack.nElement);
 		}
 	}
 
-	void Message::Reverse(u32* body, unsigned elements) {
+	void ReceivedMessage::Reverse(u32* body, unsigned elements) {
 		for (; elements--; ++body) {
 			*body = (*body >> 24) | ((*body >> 8) & 0xff00) |
 					((*body << 8) & 0xff0000) | (*body << 24);
 		}
 	}
 
-	void Message::ReadBody(int fd) {
-		if (pack.elements) {
-			const unsigned len(pack.elements * sizeof(u32));
-			/// body読み
-			if (read(fd, pack.body, len) != len) {
-				throw -1;
-			}
-		}
-	}
 
 }

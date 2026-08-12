@@ -1,5 +1,8 @@
-/** 通信ポート
- * Copyright (C) 2017,2025 tarosuke<webmaster@tarosuke.net>
+/***** Comm : 通信の端点とObjectの保持
+ * wODM側ではsshを起動して繋げる
+ * wOApp側ではtb::Appと多重継承
+ *
+ * Copyright (C) 2017,2025, 2026 tarosuke<webmaster@tarosuke.net>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -18,53 +21,68 @@
  */
 #pragma once
 
+#include "message.h"
+#include <deque>
 #include <tb/list.h>
 
 
 
 namespace wO {
 
-	struct Object;
-	struct Message;
-
-	/** 指定したハンドルでMessageをやり取りするポート
-	 */
 	struct Comm {
-		Comm(const Comm&) = delete;
-		void operator=(const Comm&) = delete;
-
-	public:
-		struct Node {
-			Node() = delete;
-			Node(const Node&) = delete;
-			void operator=(const Node&) = delete;
-
-			Node(Comm& c) : comm(c) {};
-			virtual ~Node() {};
-
-		protected:
-			void Send(Message&);
-
-		private:
-			Comm& comm;
-		};
-
-
 		Comm(int r = 0, int w = 1) : readHandle(r), writeHandle(w) {};
 		virtual ~Comm();
-		void Run();
 
-		void Register(Object&);
-		void Send(Message&);
-
-	protected:
-		virtual bool OnMessage(Message&) = 0; // 偽なら終了
+		bool Send(const void*, unsigned nElement);
+		void Hear(void*, unsigned nElement);
 
 	private:
 		const int readHandle;
 		const int writeHandle;
-		tb::List<Object> objects;
 
-		bool Receive(void*, unsigned);
+		Comm(const Comm&) = delete;
+		void operator=(const Comm&) = delete;
 	};
+
+
+	struct App : Comm {
+		struct Object {
+			const unsigned id;
+
+			Object(unsigned id, App&);
+			~Object();
+
+			void OnMessage(Message& m) { messages.Add(m); };
+
+		private:
+			App& app;
+			tb::List<Message> messages;
+		};
+
+		App() = default;
+
+		Object* operator[](unsigned);
+		void Register(unsigned id, Object& o);
+		virtual void Unregister(unsigned id);
+
+		/***** Hear
+		 * ブロッキングでメッセージ受信と配信
+		 * NOTE:戻らないのでスレッドで並列化する必要がある
+		 */
+		void Hear();
+
+	protected:
+		struct Node {
+			const unsigned id;
+			Object* object;
+			explicit Node(unsigned id) : id(id) {};
+
+			Node() = delete;
+			Node(const Node&) = delete;
+			void operator=(const Node&) = delete;
+		};
+
+		std::deque<Node> nodes;
+	};
+
 }
