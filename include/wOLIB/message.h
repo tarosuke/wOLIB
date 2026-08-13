@@ -107,7 +107,7 @@ namespace wO {
 		tb::u32 Type() const { return pack.type; };
 		tb::u32 ID() const { return pack.id; };
 
-		void Send(Comm&);
+		void Send(Comm&) const;
 
 	protected:
 		struct Pack {

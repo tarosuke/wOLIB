@@ -50,7 +50,7 @@ namespace wO {
 	}
 
 
-	/***** AppとObject
+	/***** App::Object
 	 */
 	App::Object::Object(unsigned id, App& app) : id(id), app(app) {
 		app.Register(id, *this);
@@ -60,6 +60,9 @@ namespace wO {
 		app.Unregister(id);
 	}
 
+
+	/***** App
+	 */
 	App::Object* App::operator[](unsigned id) {
 		assert(id < nodes.size());
 		return nodes[id].object;

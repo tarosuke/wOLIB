@@ -31,8 +31,7 @@
 
 namespace wO {
 
-	void Message::Send(Comm& c) { c.Send((void*)&pack, pack.nElement); };
-
+	void Message::Send(Comm& c) const { c.Send((void*)&pack, pack.nElement); };
 
 
 	void ReceivedMessage::Hear(Comm& c) {

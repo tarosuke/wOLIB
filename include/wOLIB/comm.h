@@ -46,12 +46,16 @@ namespace wO {
 
 
 	struct App : Comm {
+		/***** サーバ / クライアント間で通信するObject
+		 * メッセージを送信するときはSend、受け取ったメッセージはmessagesに追加される
+		 */
 		struct Object {
 			const unsigned id;
 
 			Object(unsigned id, App&);
-			~Object();
+			virtual ~Object();
 
+			void Send(const Message& m) { m.Send(app); };
 			void OnMessage(Message& m) { messages.Add(m); };
 
 		private:
@@ -74,8 +78,14 @@ namespace wO {
 	protected:
 		struct Node {
 			const unsigned id;
+			Node* next;
 			Object* object;
 			explicit Node(unsigned id) : id(id) {};
+			~Node() {
+				if (object) {
+					delete object;
+				}
+			}
 
 			Node() = delete;
 			Node(const Node&) = delete;
